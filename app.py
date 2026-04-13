@@ -75,21 +75,33 @@ def _extract_key_elements(html: str):
     buttons = soup.find_all(["button", "a"])
 
     cta_text = "Click here"
+    
+    priority_words = ["start", "get", "try", "sign", "free",
+                      "demo", "join", "buy", "book", "create"]
+    fallbacks = []
     for btn in buttons:
-        # if nav elems present, skip
         if btn.find_parent("nav"):
             continue
 
         text = btn.get_text(strip=True)
-        if (any(word in text.lower() for word in ["get", 
-                                                  "start", "try", 
-                                                  "sign up", "buy", 
-                                                  "free", "demo", "join"]) 
-                                                  and 2 <= len(text) <= 25
-                                                  and "login" not in text.lower()
-                                                  and "sign in" not in text.lower()):
+        if not text or len(text) > 30:
+            continue
+
+        if any(word in text.lower() for word in priority_words):
             cta_text = text
             break
+
+        if (5 <= len(text) <= 25 and
+            text[0].isupper() and # button-like
+            " " in text and
+            not any(b in text.lower() for b in ["revenue", "growth",
+                                                "customers", "users", "%"])):
+            fallbacks.append(text)  
+        
+
+        # use fallback if no strong cta found
+        if cta_text == "Click here" and fallbacks:
+            cta_text = fallbacks[0]
 
     # return temp html
     return f"""
