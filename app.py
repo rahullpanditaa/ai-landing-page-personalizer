@@ -1,6 +1,18 @@
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 from flask import Flask, request, render_template
+import os
 import requests
+import google.generativeai as genai
+import json
+
+# load api key
+load_dotenv()
+api_key = os.getenv("API_KEY")
+
+# configure gemini
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 app = Flask(__name__)
 
@@ -62,13 +74,13 @@ def _extract_key_elements(html: str):
 
 
     # extract subheadline
-    subheading = ""
+    subheadline = ""
     paragraphs = soup.find_all("p")
 
     for p in paragraphs:
         text = p.get_text(strip=True)
         if text and len(text) > 30:
-            subheading = text
+            subheadline = text
             break
 
     # extract the CTA
@@ -103,9 +115,35 @@ def _extract_key_elements(html: str):
         if cta_text == "Click here" and fallbacks:
             cta_text = fallbacks[0]
 
-    # return temp html
-    return f"""
-    <h3>Extracted content</h3>
-    <p><strong>Headline:</strong> {headline}</p>
-    <p><strong>Subheadline:</strong> {subheading}</p>
-    <p><strong>CTA:</strong> {cta_text}</p>"""
+    return headline, subheadline, cta_text
+
+def rewrite_content(ad_text: str, headline: str, subheadline: str, cta: str):
+    prompt = f"""
+You are an expert in conversion rate optimization (CRO).
+
+Rewrite the landing page content to match the ad intent.
+
+Ad Creative:
+{ad_text}
+
+Landing Page:
+Headline: {headline}
+Subheadline: {subheadline}
+CTA: {cta}
+
+Rules:
+- Do NOT invent new features
+- Keep meaning consistent
+- Make it more persuasive
+- Keep it concise
+
+Output STRICT JSON:
+{{
+  "headline": "...",
+  "subheadline": "...",
+  "cta": "..."
+}}
+"""
+
+    response = model.generate_content(prompt)
+    return response.text
