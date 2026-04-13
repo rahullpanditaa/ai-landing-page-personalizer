@@ -2,6 +2,8 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from google import genai
 import os
+import re
+import json
 
 # load api key
 load_dotenv()
@@ -104,7 +106,15 @@ Output STRICT JSON:
 """
 
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-2.5-flash-lite",
         contents=prompt
     )
     return response.text
+
+def _clean_and_parse(ai_output):
+    try:
+        cleaned = re.sub(r"```json|```", "", ai_output).strip()
+
+        return json.loads(cleaned)
+    except Exception:
+        return {"raw_output": ai_output}

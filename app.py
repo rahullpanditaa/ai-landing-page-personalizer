@@ -2,7 +2,10 @@ from flask import Flask, request, render_template
 import requests
 import json
 
-from lib.helpers import _extract_key_elements, _rewrite_content
+from lib.helpers import (
+    _extract_key_elements, 
+    _rewrite_content,
+    _clean_and_parse)
 
 app = Flask(__name__)
 
@@ -43,7 +46,7 @@ def generate():
         
         # parse jsoon
         try:
-            parsed_json = json.loads(output)
+            parsed_json = _clean_and_parse(ai_output=output)
         except:
             parsed_json = {"raw_output": output}
 
