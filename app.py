@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 from flask import Flask, request, render_template
 import requests
 
@@ -29,13 +30,70 @@ def generate():
                                    code=response.status_code)
         
         # Get html 
-        html = response.text
+        html = response.text        
 
-        # Return the html fetched
+        # extract key elements from html
+        html = _extract_key_elements(html=html)
+
         return html
     except Exception as e:
         return render_template("error.html",
                                message=f"Error fetching page: {str(e)}",
                                code=403)
+    
+def _extract_key_elements(html: str):
+    soup = BeautifulSoup(html, "html.parser")
 
-    return render_template("generated.html", ad_text=ad_text, url=url)
+    # remove sections
+    for tag in soup(["nave", "header", "footer", "script", "style"]):
+        tag.decompose()
+
+    # extract headline
+    headlines = soup.find_all("h1")
+    headline = "No headline found"
+    for h in headlines:
+        text = h.get_text(strip=True)
+        if (text and len(text) > 15 
+            and "logo" not in text.lower()
+            and "sign in" not in text.lower()
+            and "login" not in text.lower()):
+            headline = text
+            break
+
+
+    # extract subheadline
+    subheading = ""
+    paragraphs = soup.find_all("p")
+
+    for p in paragraphs:
+        text = p.get_text(strip=True)
+        if text and len(text) > 30:
+            subheading = text
+            break
+
+    # extract the CTA
+    buttons = soup.find_all(["button", "a"])
+
+    cta_text = "Click here"
+    for btn in buttons:
+        # if nav elems present, skip
+        if btn.find_parent("nav"):
+            continue
+
+        text = btn.get_text(strip=True)
+        if (any(word in text.lower() for word in ["get", 
+                                                  "start", "try", 
+                                                  "sign up", "buy", 
+                                                  "free", "demo", "join"]) 
+                                                  and 2 <= len(text) <= 25
+                                                  and "login" not in text.lower()
+                                                  and "sign in" not in text.lower()):
+            cta_text = text
+            break
+
+    # return temp html
+    return f"""
+    <h3>Extracted content</h3>
+    <p><strong>Headline:</strong> {headline}</p>
+    <p><strong>Subheadline:</strong> {subheading}</p>
+    <p><strong>CTA:</strong> {cta_text}</p>"""
