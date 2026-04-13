@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Home
+{% endblock %}
+
+{% block body %}
+    <h2>Personalize any landing page for your ad</h2>
+    <form action="/generate" method="post">
+        <label>Ad Creative:</label>
+        <br>
+        <textarea name="ad_text" rows="5" cols="50" placeholder="Enter ad ad_text" autofocus autocomplete="off" required></textarea>
+        <br><br>
+
+        <label>Landing Page URL</label>
+        <br>
+        <input name="url" placeholder="Page URL" autocomplete="off" required>
+        <br><br>
+        
+        <button type="submit">Generate</button>
+    </form>
+
+{% endblock %}
