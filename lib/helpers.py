@@ -13,7 +13,7 @@ API_KEY = os.getenv("API_KEY")
 client = genai.Client(api_key=API_KEY)
 
 # extrct headline, subheadline, cta
-def _extract_key_elements(html: str):
+def _extract_key_elements_with_tags(html: str):
     soup = BeautifulSoup(html, "html.parser")
 
     # remove sections
@@ -21,32 +21,32 @@ def _extract_key_elements(html: str):
         tag.decompose()
 
     # extract headline
+    headline_tag = None
     headlines = soup.find_all("h1")
-    headline = "No headline found"
     for h in headlines:
         text = h.get_text(strip=True)
         if (text and len(text) > 15 
             and "logo" not in text.lower()
             and "sign in" not in text.lower()
             and "login" not in text.lower()):
-            headline = text
+            headline_tag = text
             break
 
 
     # extract subheadline
-    subheadline = ""
+    sub_tag = None
     paragraphs = soup.find_all("p")
 
     for p in paragraphs:
         text = p.get_text(strip=True)
         if text and len(text) > 30:
-            subheadline = text
+            sub_tag = text
             break
 
     # extract the CTA
     buttons = soup.find_all(["button", "a"])
 
-    cta_text = "Click here"
+    cta_tag = None
     
     priority_words = ["start", "get", "try", "sign", "free",
                       "demo", "join", "buy", "book", "create"]
@@ -60,7 +60,7 @@ def _extract_key_elements(html: str):
             continue
 
         if any(word in text.lower() for word in priority_words):
-            cta_text = text
+            cta_tag = btn
             break
 
         if (5 <= len(text) <= 25 and
@@ -75,7 +75,7 @@ def _extract_key_elements(html: str):
         if cta_text == "Click here" and fallbacks:
             cta_text = fallbacks[0]
 
-    return headline, subheadline, cta_text
+    return soup, headline_tag, sub_tag, cta_tag
 
 def _rewrite_content(ad_text: str, headline: str, subheadline: str, cta: str):
     prompt = f"""
@@ -118,3 +118,16 @@ def _clean_and_parse(ai_output):
         return json.loads(cleaned)
     except Exception:
         return {"raw_output": ai_output}
+    
+def inject_ai_content(soup, headline_tag, sub_tag, cta_tag, ai_data):
+
+    if headline_tag and "headline" in ai_data:
+        headline_tag.string = ai_data["headline"]
+
+    if sub_tag and "subheadline" in ai_data:
+        sub_tag.string = ai_data["subheadline"]
+
+    if cta_tag and "cta" in ai_data:
+        cta_tag.string = ai_data["cta"]
+
+    return str(soup)
