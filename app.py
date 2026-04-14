@@ -1,11 +1,13 @@
+from bs4 import BeautifulSoup
 from flask import Flask, request, render_template
 import requests
 import json
 
 from lib.helpers import (
-    _extract_key_elements, 
+    _extract_key_elements_with_tags, 
     _rewrite_content,
-    _clean_and_parse)
+    _clean_and_parse,
+    _inject_ai_content)
 
 app = Flask(__name__)
 
@@ -37,29 +39,27 @@ def generate():
         # Get html 
         html = response.text        
 
-        # extract content
-        headline, subheadline, cta = _extract_key_elements(html=html)
+        # extract content with tags
+        soup, h_tag, sub_tag, cta_tag = _extract_key_elements_with_tags(html=html)
+
+        # get original text for ai input
+        headline = h_tag.get_text(strip=True) if h_tag else ""
+        subheadline = sub_tag.get_text(strip=True) if sub_tag else ""
+        cta = cta_tag.get_text(strip=True) if cta_tag else ""
+        
 
         # rewrite using llm
         output = _rewrite_content(ad_text=ad_text, headline=headline,
                                   subheadline=subheadline, cta=cta)
         
-        # parse jsoon
-        try:
-            parsed_json = _clean_and_parse(ai_output=output)
-        except:
-            parsed_json = {"raw_output": output}
+        parsed_json = _clean_and_parse(ai_output=output)
 
-        return f"""
-        <h2>Original</h2>
-        <p><strong>Headline:</strong> {headline}</p>
-        <p><strong>Subheadline:</strong> {subheadline}</p>
-        <p><strong>CTA:</strong> {cta}</p>
+        # inject back into html
+        modified_html = _inject_ai_content(soup=soup, headline_tag=h_tag,
+                                           sub_tag=sub_tag, cta_tag=cta_tag, 
+                                           ai_data=parsed_json)
         
-        <hr>
-        
-        <h2>AI personalized
-        <pre>{parsed_json}</pre>"""
+        return modified_html
 
     except Exception as e:
         return render_template("error.html",

@@ -17,7 +17,7 @@ def _extract_key_elements_with_tags(html: str):
     soup = BeautifulSoup(html, "html.parser")
 
     # remove sections
-    for tag in soup(["nave", "header", "footer", "script", "style"]):
+    for tag in soup(["nav", "header", "footer", "script", "style"]):
         tag.decompose()
 
     # extract headline
@@ -29,7 +29,7 @@ def _extract_key_elements_with_tags(html: str):
             and "logo" not in text.lower()
             and "sign in" not in text.lower()
             and "login" not in text.lower()):
-            headline_tag = text
+            headline_tag = h
             break
 
 
@@ -40,7 +40,7 @@ def _extract_key_elements_with_tags(html: str):
     for p in paragraphs:
         text = p.get_text(strip=True)
         if text and len(text) > 30:
-            sub_tag = text
+            sub_tag = p
             break
 
     # extract the CTA
@@ -68,12 +68,12 @@ def _extract_key_elements_with_tags(html: str):
             " " in text and
             not any(b in text.lower() for b in ["revenue", "growth",
                                                 "customers", "users", "%"])):
-            fallbacks.append(text)  
+            fallbacks.append(btn)  
         
 
         # use fallback if no strong cta found
-        if cta_text == "Click here" and fallbacks:
-            cta_text = fallbacks[0]
+        if cta_tag is None and fallbacks:
+            cta_tag = fallbacks[0]
 
     return soup, headline_tag, sub_tag, cta_tag
 
@@ -119,7 +119,7 @@ def _clean_and_parse(ai_output):
     except Exception:
         return {"raw_output": ai_output}
     
-def inject_ai_content(soup, headline_tag, sub_tag, cta_tag, ai_data):
+def _inject_ai_content(soup, headline_tag, sub_tag, cta_tag, ai_data):
 
     if headline_tag and "headline" in ai_data:
         headline_tag.string = ai_data["headline"]
