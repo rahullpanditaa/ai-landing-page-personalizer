@@ -7,7 +7,8 @@ from lib.helpers import (
     _extract_key_elements_with_tags, 
     _rewrite_content,
     _clean_and_parse,
-    _inject_ai_content)
+    _inject_ai_content,
+    _fix_relative_paths)
 
 app = Flask(__name__)
 
@@ -59,6 +60,8 @@ def generate():
                                            sub_tag=sub_tag, cta_tag=cta_tag, 
                                            ai_data=parsed_json)
         
+        # resolve all relative paths using original site
+        modified_html = _fix_relative_paths(html=modified_html, url=url)
         return modified_html
 
     except Exception as e:

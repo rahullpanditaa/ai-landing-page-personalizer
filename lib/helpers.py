@@ -131,3 +131,12 @@ def _inject_ai_content(soup, headline_tag, sub_tag, cta_tag, ai_data):
         cta_tag.string = ai_data["cta"]
 
     return str(soup)
+
+def _fix_relative_paths(html, url):
+    soup = BeautifulSoup(html, "html.parser")
+
+    base_tag = soup.new_tag("base", href=url)
+    if soup.head:
+        soup.head.insert(0, base_tag)
+
+    return str(soup)
